@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cajero Automático (ATM) - Simulador Bancario</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body class="bg-dark text-light min-vh-100 d-flex align-items-center py-4">
+  <div class="container">
+    <div class="row justify-content-center">
+      <div class="col-lg-7">
+        <div class="card bg-secondary text-white border-0 shadow-lg rounded-4 overflow-hidden">
+          <div class="card-header bg-black d-flex justify-content-between align-items-center p-3">
+            <h5 class="mb-0 fw-bold text-warning">🏧 CAJERO AUTOMÁTICO BANCARIO</h5>
+            <a href="/index.html" class="btn btn-sm btn-outline-light">Ir a Banca Virtual</a>
+          </div>
+
+          <div class="card-body p-4 bg-dark">
+            <div id="alertaCajero" class="alert d-none"></div>
+
+            <!-- Pantalla 1: Ingreso de Cuenta y PIN -->
+            <div id="vistaLoginCajero">
+              <p class="text-info mb-3">Ingrese sus datos para iniciar la operación en el cajero:</p>
+              <form id="formLoginCajero">
+                <div class="mb-3">
+                  <label class="form-label">Número de Cuenta</label>
+                  <input type="text" id="atmCuenta" class="form-control form-control-lg bg-secondary text-white border-0" placeholder="Ej: 1001000001" required>
+                </div>
+                <div class="mb-4">
+                  <label class="form-label">PIN de Seguridad (4 dígitos)</label>
+                  <input type="password" id="atmPin" class="form-control form-control-lg bg-secondary text-white border-0" placeholder="••••" maxlength="6" required>
+                </div>
+                <button type="submit" class="btn btn-warning btn-lg w-100 fw-bold">Ingresar al Cajero</button>
+              </form>
+              <div class="mt-3 small text-secondary">
+                💡 <b>Prueba rápida:</b> Cuenta <code>1001000001</code> | PIN: <code>1234</code>
+              </div>
+            </div>
+
+            <!-- Pantalla 2: Menú de Operaciones del Cajero -->
+            <div id="vistaMenuCajero" class="d-none">
+              <div class="p-3 rounded-3 bg-secondary bg-opacity-25 mb-4 d-flex justify-content-between align-items-center">
+                <div>
+                  <div class="small text-secondary">Titular de la cuenta</div>
+                  <h5 id="atmTitular" class="fw-bold mb-0">-</h5>
+                  <small id="atmNumeroCuenta" class="text-warning">-</small>
+                </div>
+                <div class="text-end">
+                  <div class="small text-secondary">Saldo Disponible</div>
+                  <h3 id="atmSaldo" class="fw-bold text-success mb-0">$0</h3>
+                </div>
+              </div>
+
+              <!-- Formulario de Retiro -->
+              <div class="card bg-secondary bg-opacity-10 border-secondary mb-4">
+                <div class="card-body">
+                  <h6 class="fw-bold text-warning mb-3">💵 Realizar Retiro en Efectivo</h6>
+                  <div class="d-flex gap-2 mb-3 flex-wrap">
+                    <button type="button" class="btn btn-outline-info btn-sm" onclick="fijarMonto(50000)">$50.000</button>
+                    <button type="button" class="btn btn-outline-info btn-sm" onclick="fijarMonto(100000)">$100.000</button>
+                    <button type="button" class="btn btn-outline-info btn-sm" onclick="fijarMonto(200000)">$200.000</button>
+                    <button type="button" class="btn btn-outline-info btn-sm" onclick="fijarMonto(500000)">$500.000</button>
+                  </div>
+                  <form id="formRetiro" class="d-flex gap-2">
+                    <input type="number" id="montoRetiro" class="form-control" placeholder="Otro valor a retirar ($)" min="1" required>
+                    <button type="submit" class="btn btn-success fw-bold px-4">Retirar</button>
+                  </form>
+                </div>
+              </div>
+
+              <!-- Últimos Movimientos -->
+              <h6 class="fw-bold text-info mb-2">🧾 Últimos Movimientos</h6>
+              <div class="table-responsive mb-4" style="max-height: 220px;">
+                <table class="table table-dark table-sm table-striped align-middle mb-0">
+                  <thead>
+                    <tr>
+                      <th>Fecha</th>
+                      <th>Movimiento</th>
+                      <th>Valor</th>
+                      <th>Saldo</th>
+                    </tr>
+                  </thead>
+                  <tbody id="tablaAtmMovimientos"></tbody>
+                </table>
+              </div>
+
+              <button id="btnSalirCajero" class="btn btn-danger w-100 fw-bold">Cerrar Operación y Retirar Tarjeta</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const formatoMoneda = (n) => Number(n).toLocaleString('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 });
+    const alertaCajero = document.getElementById('alertaCajero');
+
+    function mostrarAlerta(msg, tipo = 'danger') {
+      alertaCajero.className = `alert alert-${tipo}`;
+      alertaCajero.textContent = msg;
+      setTimeout(() => alertaCajero.className = 'alert d-none', 4500);
+    }
+
+    window.fijarMonto = (valor) => {
+      document.getElementById('montoRetiro').value = valor;
+    };
+
+    async function actualizarPantallaCajero() {
+      const res = await fetch('/api/cajero/datos').then(r => r.json());
+      if (!res.ok) return;
+
+      document.getElementById('vistaLoginCajero').classList.add('d-none');
+      document.getElementById('vistaMenuCajero').classList.remove('d-none');
+
+      document.getElementById('atmTitular').textContent = res.cuenta.titular;
+      document.getElementById('atmNumeroCuenta').textContent = `Cuenta ${res.cuenta.tipo_cuenta} N° ${res.cuenta.numero_cuenta}`;
+      document.getElementById('atmSaldo').textContent = formatoMoneda(res.cuenta.saldo);
+
+      document.getElementById('tablaAtmMovimientos').innerHTML = res.movimientos.map(m => `
+        <tr>
+          <td><small>${new Date(m.fecha).toLocaleString('es-CO')}</small></td>
+          <td><small>${m.tipo_movimiento}</small></td>
+          <td class="${m.tipo_movimiento.includes('RETIRO') || m.tipo_movimiento.includes('ENVIADA') ? 'text-danger' : 'text-success'} fw-bold">
+            ${formatoMoneda(m.valor)}
+          </td>
+          <td><small>${formatoMoneda(m.saldo_resultante)}</small></td>
+        </tr>
+      `).join('');
+    }
+
+    document.getElementById('formLoginCajero').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const numero_cuenta = document.getElementById('atmCuenta').value.trim();
+      const pin = document.getElementById('atmPin').value.trim();
+
+      const res = await fetch('/api/cajero/login', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ numero_cuenta, pin })
+      }).then(r => r.json());
+
+      if (!res.ok) return mostrarAlerta(res.mensaje);
+      mostrarAlerta('Identificación exitosa', 'success');
+      actualizarPantallaCajero();
+    });
+
+    document.getElementById('formRetiro').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const valor = Number(document.getElementById('montoRetiro').value);
+
+      const res = await fetch('/api/cajero/retirar', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ valor })
+      }).then(r => r.json());
+
+      if (!res.ok) return mostrarAlerta(res.mensaje, 'danger');
+      mostrarAlerta(`${res.mensaje}. Nuevo saldo: ${formatoMoneda(res.nuevo_saldo)}`, 'success');
+      e.target.reset();
+      actualizarPantallaCajero();
+    });
+
+    document.getElementById('btnSalirCajero').addEventListener('click', async () => {
+      await fetch('/api/cajero/logout', { method: 'POST' });
+      document.getElementById('vistaMenuCajero').classList.add('d-none');
+      document.getElementById('vistaLoginCajero').classList.remove('d-none');
+      document.getElementById('formLoginCajero').reset();
+      mostrarAlerta('Operación finalizada correctamente', 'info');
+    });
+  </script>
+</body>
+</html>
