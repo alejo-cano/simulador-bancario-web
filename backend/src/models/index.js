@@ -1,7 +1,5 @@
 const bcrypt = require('bcryptjs');
 const sequelize = require('../config/database');
-const bcrypt = require('bcryptjs');
-const sequelize = require('../config/database');
 const Usuario = require('./usuario');
 const Cuenta = require('./cuenta');
 const Transferencia = require('./transferencia');
